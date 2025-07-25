@@ -6,7 +6,7 @@ import time
 import threading
 import sqlite3
 
-bot = telebot.TeleBot('')
+bot = telebot.TeleBot('YOUR_API')
 
 waiting_for_task = {}
 waiting_for_delete_task = {}
@@ -14,23 +14,21 @@ waiting_for_delete_task = {}
 DATABASE_FILE = 'tasks.db' 
 
 def create_table():
-    """Создаем таблицу tasks, если она не существует."""
+    """Создаем таблицу tasks, если она не существует"""
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             description TEXT,
             date TEXT,
             completed INTEGER DEFAULT 0
-        )
     """)
     conn.commit()
     conn.close()
 
 def save_task(user_id, description, date):
-    """Сохраняем задачу в базу данных."""
+    """Сохраняем задачу в базу данных"""
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO tasks (user_id, description, date) VALUES (?, ?, ?)",
@@ -39,7 +37,7 @@ def save_task(user_id, description, date):
     conn.close()
 
 def get_tasks_for_date(user_id, date):
-    """Получаем список задач с id для пользователя на указанную дату."""
+    """Получаем список задач с id для пользователя на указанную дату"""
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
     cursor.execute("SELECT id, description FROM tasks WHERE user_id = ? AND date = ?",
@@ -49,7 +47,7 @@ def get_tasks_for_date(user_id, date):
     return tasks
 
 def delete_task(task_id):
-    """Удаляем задачу из базы данных по ID."""
+    """Удаляем задачу из базы данных по ID"""
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
@@ -65,7 +63,9 @@ def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Мои возможности")
     markup.add(btn1)
-    bot.send_message(message.from_user.id, "🗓 Привет! Я твой личный бот-напоминатель. Я буду помогать тебе не забывать о важных задачах и всегда быть в курсе своих планов. Просто добавь свои задачи, и я буду напоминать о них в нужное время!", reply_markup=markup)
+    bot.send_message(message.from_user.id, "🗓 Привет! Я твой личный бот-напоминатель. \
+                    Я буду помогать тебе не забывать о важных задачах и всегда быть в курсе своих планов. \
+                    Просто добавь свои задачи, и я буду напоминать о них в нужное время!", reply_markup=markup)
 
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
@@ -124,7 +124,7 @@ def callback_query(call):
     show_tasks_today(call.message)
 
 def send_daily_reminder():
-    """Отправляем ежедневные напоминания о задачах."""
+    """Отправляем ежедневные напоминания о задачах"""
     now = datetime.date.today()
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
@@ -139,7 +139,7 @@ def send_daily_reminder():
              bot.send_message(user_id, message)
 
 def schedule_daily_reminder():
-    """Планируем отправку ежедневных напоминаний в 6 утра."""
+    """Планируем отправку ежедневных напоминаний в 6 утра"""
     schedule.every().day.at("06:00").do(send_daily_reminder)
     while True:
         schedule.run_pending()
