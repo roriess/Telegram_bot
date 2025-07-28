@@ -8,7 +8,7 @@ from telebot import types
 
 ''' Конфигурация '''
 DATABASE_FILE = 'todo.db'  # Имя файла базы данных
-BOT_TOKEN = '8428063292:AAEuDRbZVdTpD9EDuvnn6mAuHE4gJoBaGIA'
+BOT_TOKEN = ''
 REMINDER_HOUR = "06:00"  # Время для отправки ежедневного напоминания (в формате "ЧЧ:ММ")
 
 ''' Инициализация '''
