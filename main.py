@@ -1,151 +1,195 @@
 import telebot
-from telebot import types
+import sqlite3
 import datetime
 import schedule
 import time
 import threading
-import sqlite3
+from telebot import types
 
-bot = telebot.TeleBot('YOUR_API')
+''' Конфигурация '''
+DATABASE_FILE = 'todo.db'  # Имя файла базы данных
+BOT_TOKEN = '8428063292:AAEuDRbZVdTpD9EDuvnn6mAuHE4gJoBaGIA'
+REMINDER_HOUR = "06:00"  # Время для отправки ежедневного напоминания (в формате "ЧЧ:ММ")
 
-waiting_for_task = {}
-waiting_for_delete_task = {}
-
-DATABASE_FILE = 'tasks.db' 
+''' Инициализация '''
+bot = telebot.TeleBot(BOT_TOKEN)
 
 def create_table():
-    """Создаем таблицу tasks, если она не существует"""
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-    cursor.execute("""
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            description TEXT,
-            date TEXT,
-            completed INTEGER DEFAULT 0
-    """)
-    conn.commit()
-    conn.close()
+    ''' Создаем базу данных ''' 
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,      -- ID пользователя Telegram
+                description TEXT NOT NULL,     -- Описание задачи
+                date TEXT NOT NULL,            -- Дата выполнения (текст в формате YYYY-MM-DD)
+                completed INTEGER DEFAULT 0     -- Статус выполнения (0 - не выполнено, 1 - выполнено)
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        print("Таблица tasks успешно создана или уже существует.")
+    except sqlite3.Error as e:
+        print(f"Ошибка при создании таблицы: {e}")
 
 def save_task(user_id, description, date):
-    """Сохраняем задачу в базу данных"""
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO tasks (user_id, description, date) VALUES (?, ?, ?)",
-                   (user_id, description, date.strftime('%Y-%m-%d')))
-    conn.commit()
-    conn.close()
+    ''' Сохраняем новую задачу в базе данных ''' 
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO tasks (user_id, description, date) VALUES (?, ?, ?)",
+                       (user_id, description, date.strftime('%Y-%m-%d')))  # Преобразуем дату в строку
+        conn.commit()
+        conn.close()
+        print(f"Задача сохранена: user_id={user_id}, description='{description}', date={date}")
+    except sqlite3.Error as e:
+        print(f"Ошибка при сохранении задачи: {e}")
 
 def get_tasks_for_date(user_id, date):
-    """Получаем список задач с id для пользователя на указанную дату"""
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, description FROM tasks WHERE user_id = ? AND date = ?",
-                   (user_id, date.strftime('%Y-%m-%d'),))
-    tasks = cursor.fetchall() 
-    conn.close()
-    return tasks
+    ''' Получаем список задач для конкретного пользователя на определенную дату '''
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, description FROM tasks WHERE user_id = ? AND date = ?",
+                       (user_id, date.strftime('%Y-%m-%d'),))  # Преобразуем дату в строку
+        tasks = cursor.fetchall()
+        conn.close()
+        return tasks  # Возвращает список кортежей (id, description)
+    except sqlite3.Error as e:
+        print(f"Ошибка при получении задач: {e}")
+        return []  # Возвращаем пустой список в случае ошибки
 
 def delete_task(task_id):
-    """Удаляем задачу из базы данных по ID"""
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
-    conn.commit()
-    conn.close()
+    ''' Удаляем задачу из базы данных по ее ID '''
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        conn.commit()
+        conn.close()
+        print(f"Задача с ID {task_id} удалена.")
+    except sqlite3.Error as e:
+        print(f"Ошибка при удалении задачи: {e}")
 
-create_table()
-
-
-
+''' Обработчики сообщений бота '''
 @bot.message_handler(commands=['start'])
 def start(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    ''' Обработчик команды /start '''
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)  # Создаем клавиатуру
     btn1 = types.KeyboardButton("Мои возможности")
-    markup.add(btn1)
-    bot.send_message(message.from_user.id, "🗓 Привет! Я твой личный бот-напоминатель. \
-                    Я буду помогать тебе не забывать о важных задачах и всегда быть в курсе своих планов. \
-                    Просто добавь свои задачи, и я буду напоминать о них в нужное время!", reply_markup=markup)
+    markup.add(btn1)  # Добавляем кнопку на клавиатуру
+    bot.send_message(message.chat.id,
+                     "Привет! Я твой личный бот-напоминатель. Я помогу тебе не забывать о важных задачах. Просто добавь их, и я буду напоминать тебе о них!",
+                     reply_markup=markup)
 
-@bot.message_handler(content_types=['text'])
-def get_text_messages(message):
-    user_id = message.from_user.id
+@bot.message_handler(func=lambda message: message.text == 'Мои возможности')
+def handle_mis_posibilidades(message):
+    ''' Обработчик нажатия кнопки "Мои возможности" '''
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton('Добавить новую задачу')
+    btn2 = types.KeyboardButton('Задачи на сегодня')
+    btn4 = types.KeyboardButton('Как работать с ботом')
+    markup.add(btn1, btn2, btn4)
+    bot.send_message(message.chat.id, 'Что вы хотите сделать?', reply_markup=markup)
 
-    if message.text == 'Мои возможности':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('Добавить новую задачу')
-        btn2 = types.KeyboardButton('Задачи на сегодня')
-        btn4 = types.KeyboardButton('Как работать с ботом')
-        markup.add(btn1, btn2, btn4)
-        bot.send_message(user_id, 'Выберете действие:', reply_markup=markup)
+@bot.message_handler(func=lambda message: message.text == 'Добавить новую задачу')
+def ask_for_task_description(message):
+    ''' Обработчик нажатия кнопки 'Добавить новую задачу' - спрашивает описание задачи '''
+    bot.send_message(message.chat.id, 'Пожалуйста, введите описание задачи:')
+    bot.register_next_step_handler(message, ask_for_task_date)  # Переходим к следующему шагу - запросу даты
 
-    elif message.text == 'Добавить новую задачу':
-        bot.send_message(user_id, 'Введите описание задачи:')
-        global waiting_for_task
-        waiting_for_task[user_id] = True
+def ask_for_task_date(message):
+    ''' Спрашиваем дату выполнения задачи '''
+    task_description = message.text  # Получаем описание задачи из предыдущего шага
+    bot.send_message(message.chat.id, 'Введите дату выполнения задачи в формате ГГГГ-ММ-ДД:')
+    bot.register_next_step_handler(message, process_task_date, task_description)  # Переходим к обработке даты
 
-    elif user_id in waiting_for_task and waiting_for_task[user_id]:
-        task_description = message.text
-        waiting_for_task[user_id] = False
-
-        bot.send_message(user_id, 'Введите дату выполнения задачи в формате ГГГГ-ММ-ДД:')
-        bot.register_next_step_handler(message, process_date, task_description)
-
-    elif message.text == 'Задачи на сегодня':
-        show_tasks_today(message)
-
+def process_task_date(message, task_description):
+    '''  Обрабатываем веденную дату и сохраняем задачу '''
+    try:
+        task_date = datetime.datetime.strptime(message.text, '%Y-%m-%d').date()  # Преобразуем строку в дату
+        user_id = message.chat.id  # Получаем ID пользователя
+        save_task(user_id, task_description, task_date)  # Сохраняем задачу в базу данных
+        bot.send_message(user_id, f'Задача "{task_description}" запланирована на {task_date.strftime("%Y-%m-%d")}')
+    except ValueError:
+        bot.send_message(message.chat.id, "Неверный формат даты. Пожалуйста, используйте формат ГГГГ-ММ-ДД.")
 
 @bot.message_handler(func=lambda message: message.text == 'Задачи на сегодня')
 def show_tasks_today(message):
-    """Показывает задачи на сегодня с кнопками удаления"""
-    user_id = message.from_user.id
-    today = datetime.date.today()
-    tasks = get_tasks_for_date(user_id, today)
+    ''' Показываем задачи на сегодня с кнопками для удаления '''
+    user_id = message.chat.id
+    today = datetime.date.today()  # Получаем сегодняшнюю дату
+    tasks = get_tasks_for_date(user_id, today)  # Получаем задачи из базы данных
 
     if tasks:
-        keyboard = []
         message_text = "Ваши задачи на сегодня:\n"
+        keyboard = []
         for task_id, description in tasks:
-            message_text += f"- ID: {task_id}, {description}\n"
-            keyboard.append([types.InlineKeyboardButton(text=f"Удалить: {description}", callback_data=f"delete_{task_id}")])
+            message_text += f"- {description} (ID: {task_id})\n"  # Формируем текст сообщения
+            keyboard.append([types.InlineKeyboardButton(text=f"Удалить: {description}", callback_data=f"delete_{task_id}")])  # Создаем кнопку "Удалить"
 
-        reply_markup = types.InlineKeyboardMarkup(keyboard)
-        bot.send_message(user_id, message_text, reply_markup=reply_markup) 
+        reply_markup = types.InlineKeyboardMarkup(keyboard)  # Создаем клавиатуру с кнопками "Удалить"
+        bot.send_message(user_id, message_text, reply_markup=reply_markup)  # Отправляем сообщение с задачами и кнопками
     else:
         bot.send_message(user_id, "На сегодня задач нет.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))
-def callback_query(call):
-    """Обрабатываем нажатия на кнопки "Удалить"."""
-    task_id = call.data.split('_')[1]
-    delete_task(task_id)
-    bot.answer_callback_query(call.id, "Задача удалена!") 
+def handle_delete_callback(call):
+    ''' Обработчик нажатий на кнопки "Удалить" ''' 
+    try:
+        task_id = int(call.data.split('_')[1])  # Извлекаем ID задачи из callback_data
+        delete_task(task_id)  # Удаляем задачу из базы данных
+        bot.answer_callback_query(call.id, "Задача удалена!")  # Отправляем уведомление об удалении
+        bot.edit_message_text(chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              text="Задача удалена.",
+                              reply_markup=None)  # Удаляем кнопки из сообщения
+    except ValueError:
+        bot.answer_callback_query(call.id, "ID задачи недопустимый.")
+    except Exception as e:
+        print(f"Ошибка при удалении задачи: {e}")
+        bot.answer_callback_query(call.id, "Ошибка при удалении задачи.")
 
-    show_tasks_today(call.message)
-
+# ========== Функции для отправки напоминаний ==========
 def send_daily_reminder():
-    """Отправляем ежедневные напоминания о задачах"""
+    ''' Отправляем ежедневные напоминания пользователям о задачах на сегодня ''' 
     now = datetime.date.today()
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT user_id FROM tasks WHERE date = ?", (now.strftime('%Y-%m-%d'),)) 
-    user_ids = [row[0] for row in cursor.fetchall()]
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT user_id FROM tasks WHERE date = ?", (now.strftime('%Y-%m-%d'),))  # Получаем список уникальных user_id
+        user_ids = [row[0] for row in cursor.fetchall()]
+        conn.close()
 
-    for user_id in user_ids:
-        tasks = get_tasks_for_date(user_id, now)
-        if tasks:
-             task_list = "\n- ".join([f"ID: {task_id}, {description}" for task_id, description in tasks])
-             message = f"Доброе утро! Вот ваши задачи на сегодня:\n- {task_list}"
-             bot.send_message(user_id, message)
+        for user_id in user_ids:
+            tasks = get_tasks_for_date(user_id, now)  # Получаем задачи для пользователя
+            if tasks:
+                task_list = "\n- ".join([f"{description} (ID: {task_id})" for task_id, description in tasks])  # Формируем список задач
+                message = f"Доброе утро! Вот ваши задачи на сегодня:\n- {task_list}"
+                bot.send_message(user_id, message)  # Отправляем сообщение пользователю
+    except sqlite3.Error as e:
+        print(f"Ошибка при отправке ежедневного напоминания: {e}")
 
 def schedule_daily_reminder():
-    """Планируем отправку ежедневных напоминаний в 6 утра"""
-    schedule.every().day.at("06:00").do(send_daily_reminder)
+    ''' Планируем отправку ежедневных напоминаний '''
+    schedule.every().day.at(REMINDER_HOUR).do(send_daily_reminder)  # Задаем расписание - каждый день в заданное время
     while True:
-        schedule.run_pending()
-        time.sleep(60)
+        try:
+            schedule.run_pending()  # Запускаем запланированные задачи
+            time.sleep(60)  # Ждем 60 секунд (1 минута)
+        except Exception as e:
+            print(f"Ошибка в цикле планировщика: {e}")
+            time.sleep(60)  # Пауза, чтобы избежать постоянных ошибок
 
+''' Запуск бота '''
 if __name__ == '__main__':
-    create_table()
-    threading.Thread(target=schedule_daily_reminder, daemon=True).start()
-    bot.polling(none_stop=True, interval=0)
+    try:
+        create_table()  # Создаем таблицу задач
+        threading.Thread(target=schedule_daily_reminder, daemon=True).start()  # Запускаем планировщик в отдельном потоке
+        print("Бот запущен...")
+        bot.infinity_polling()  # Запускаем бота в бесконечном цикле
+    except Exception as e:
+        print(f"Произошла критическая ошибка при запуске бота: {e}")
+
