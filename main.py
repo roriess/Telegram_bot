@@ -6,10 +6,17 @@ import time
 import threading
 from telebot import types
 
+<<<<<<< HEAD
 '''Configuration'''
 DATABASE_FILE = 'todo.db'  
 BOT_TOKEN = '8428063292:AAFMBIQc37O5FyDBecyA4dNrxDhsedHwxJs'
 REMINDER_HOUR = "06:00"
+=======
+''' Конфигурация '''
+DATABASE_FILE = 'todo.db'  # Имя файла базы данных
+BOT_TOKEN = ''
+REMINDER_HOUR = "06:00"  # Время для отправки ежедневного напоминания (в формате "ЧЧ:ММ")
+>>>>>>> 519ad99c1c23a0ac18e57e32992e051fb3827569
 
 '''Initialization'''
 bot = telebot.TeleBot(BOT_TOKEN)
