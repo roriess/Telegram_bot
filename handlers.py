@@ -29,13 +29,15 @@ def handle_mis_posibilidades(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton('➕ Добавить новую задачу')
     btn2 = types.KeyboardButton('🗓 Задачи на сегодня')
+    btn3 = types.KeyboardButton('🗓 Задачи на определенную дату')
     btn4 = types.KeyboardButton('❓ Как работать с ботом')
-    markup.add(btn1, btn2, btn4)
+    markup.add(btn1, btn2, btn3, btn4)
     bot.send_message(message.chat.id, 
 '''Что вы хотите сделать?
 
 📌 "Добавить новую задачу": Позволяет создать новую задачу с указанием даты и описания.
 📌 "Задачи на сегодня": Показывает список задач, запланированных на сегодняшний день.
+📌 "Задачи на определенную дату": Показывает список задач, запланированных на определенный день.
 📌 "Как работать с ботом": Предоставляет инструкции по использованию бота и его основных функций.'''
                     , reply_markup=markup)
 
@@ -85,6 +87,39 @@ def show_tasks_today(message):
         bot.send_message(user_id, "На сегодня задач нет. Можно и отдохнуть :)")
 
 
+@bot.message_handler(func=lambda message: message.text == '🗓 Задачи на определенную дату')
+def ask_for_tasks_date(message):
+    '''Ask for tasks date'''
+    global task_description
+    task_description = message.text
+    bot.send_message(message.chat.id, 'Введите необходимую дату в формате ГГГГ-ММ-ДД:')
+    bot.register_next_step_handler(message, show_tasks)
+
+def show_tasks(message):
+    '''Show tasks with delete buttons'''
+    global task_description
+    user_id = message.chat.id
+    try:
+        tasks_date = datetime.datetime.strptime(message.text, '%Y-%m-%d').date()
+    except ValueError:
+        bot.send_message(user_id, "Неверный формат даты. Пожалуйста, введите дату в формате ГГГГ-ММ-ДД.")
+        return
+
+    tasks = get_tasks_for_date(user_id, tasks_date)
+
+    if tasks:
+        message_text = f"Ваши задачи (Описание: {task_description}):\n"
+        keyboard = []
+        for task_id, description in tasks:
+            message_text += f"- {description} (ID: {task_id})\n"
+            keyboard.append([types.InlineKeyboardButton(text=f"Удалить: {description}", callback_data=f"delete_{task_id}")])
+
+        reply_markup = types.InlineKeyboardMarkup(keyboard)
+        bot.send_message(user_id, message_text, reply_markup=reply_markup)
+    else:
+        bot.send_message(user_id, "Задач нет. Можно и отдохнуть :)")
+
+
 @bot.message_handler(func=lambda message: message.text == '❓ Как работать с ботом')
 def handle_mis_posibilidades(message):
     '''Handler of the "Как работать с ботом" command'''
@@ -100,7 +135,7 @@ def handle_mis_posibilidades(message):
 2️⃣  Как работать с ботом - Выводит это справочное сообщение.
 3️⃣  Добавить новую задачу - Добавление новой задачи с описанием на определенную дату
 4️⃣  Задачи на сегодня - Просмотр всех задач, добавленных на сегодня.'''
-                    , reply_markup=markup) 
+                    , reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('delete_'))
