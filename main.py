@@ -7,6 +7,7 @@ import threading
 from telebot import types
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 '''Configuration'''
 DATABASE_FILE = 'todo.db'  
 BOT_TOKEN = '8428063292:AAFMBIQc37O5FyDBecyA4dNrxDhsedHwxJs'
@@ -17,6 +18,12 @@ DATABASE_FILE = 'todo.db'  # Имя файла базы данных
 BOT_TOKEN = ''
 REMINDER_HOUR = "06:00"  # Время для отправки ежедневного напоминания (в формате "ЧЧ:ММ")
 >>>>>>> 519ad99c1c23a0ac18e57e32992e051fb3827569
+=======
+'''Configuration'''
+DATABASE_FILE = 'todo.db'  
+BOT_TOKEN = ''
+REMINDER_HOUR = "06:00"
+>>>>>>> 2b8f350de005f21812ed3ca722323574d27e7c6f
 
 '''Initialization'''
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -217,4 +224,8 @@ if __name__ == '__main__':
         print("Бот запущен...")
         bot.infinity_polling()
     except Exception as e:
+<<<<<<< HEAD
         print(f"Произошла критическая ошибка при запуске бота: {e}")
+=======
+        print(f"Произошла критическая ошибка при запуске бота: {e}")
+>>>>>>> 2b8f350de005f21812ed3ca722323574d27e7c6f
