@@ -1,0 +1,3 @@
+DATABASE_FILE = 'todo.db'  
+BOT_TOKEN = ''
+REMINDER_HOUR = "06:00"

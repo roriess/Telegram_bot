@@ -2,7 +2,7 @@
 
 This is a simple Telegram bot designed to help users manage their daily tasks and stay organized. Users can add tasks with a description and due date, view their tasks for the current day, and delete tasks either individually from the daily task list. The bot also sends a daily reminder at 6:00 AM with a list of tasks due for that day.
 
-### 🖇 Features
+###  Features
 
 •   **Add Tasks:**  Users can add tasks with a description and due date (YYYY-MM-DD).
 
@@ -13,7 +13,7 @@ This is a simple Telegram bot designed to help users manage their daily tasks an
 •   **Daily Reminders:** Sends a daily notification at 6:00 AM with a list of tasks scheduled for that day.
 
 
-###  🖇 Technologies Used
+###   Technologies Used
 
 •   Python
 
@@ -23,8 +23,8 @@ This is a simple Telegram bot designed to help users manage their daily tasks an
 
 •   Schedule library
 
-###  🖇 Database
+###   Database
 
-The bot uses an SQLite database (`tasks.db`) to store task information. The database schema includes fields for task ID, user ID, description, due date, and completion status.
+The bot uses an SQLite database (`todo.db`) to store task information. The database schema includes fields for task ID, user ID, description, due date, and completion status.
 
 You can find the bot on Telegram to try out its features by using this nickname: @Tufaforubot
