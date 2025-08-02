@@ -26,5 +26,3 @@ This is a simple Telegram bot designed to help users manage their daily tasks an
 ###   Database
 
 The bot uses an SQLite database (`todo.db`) to store task information. The database schema includes fields for task ID, user ID, description, due date, and completion status.
-
-You can find the bot on Telegram to try out its features by using this nickname: @Tufaforubot
